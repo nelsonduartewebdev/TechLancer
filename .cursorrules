@@ -1,0 +1,37 @@
+You are working in a React Native project using Expo (managed workflow).
+
+Assume:
+- Expo SDK APIs are preferred over custom native code
+- Cross-platform compatibility (iOS + Android) is required
+- The app runs in Android Emulator and iOS Simulator, not a physical device
+- Modern React with hooks and functional components only
+
+When generating code:
+- Use React Native components, not HTML elements
+- Avoid browser-specific APIs (window, document, localStorage)
+- Avoid Node.js-only APIs (fs, path, process)
+- Prefer Expo libraries (expo-av, expo-image, expo-haptics, expo-router)
+- Use StyleSheet or inline styles, not CSS
+- Use Flexbox for layout
+
+Navigation:
+- Prefer expo-router unless explicitly told otherwise
+- Use file-based routing conventions correctly
+
+State & data:
+- Prefer React hooks and lightweight state (useState, useEffect)
+- Avoid Redux unless explicitly requested
+- Assume async storage uses expo-secure-store or @react-native-async-storage
+
+Performance & UX:
+- Avoid unnecessary re-renders
+- Use FlatList instead of ScrollView for long lists
+- Respect mobile gestures and safe areas
+
+Debugging:
+- Prefer console.log and Expo DevTools-compatible debugging
+- Avoid instructions requiring physical devices unless requested
+
+Output:
+- Provide complete, runnable code examples
+- Do not include web-specific setup steps unless explicitly requested
