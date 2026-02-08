@@ -9,6 +9,10 @@ const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL || 
   'http://localhost:3000/api/v1';
 
+// Base URL for /api/* routes (profiles, tickets) - no /v1
+const baseDomain = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
+const API_BASE = `${baseDomain}/api`;
+
 // Log API configuration on module load
 logger.log('[API] Initialized with base URL:', API_BASE_URL);
 
@@ -66,10 +70,11 @@ const buildUrl = (baseUrl: string, url: string, params?: any): string => {
 const makeRequest = async (
   url: string,
   options: RequestInit = {},
-  params?: any
+  params?: any,
+  baseUrl: string = API_BASE_URL
 ): Promise<Response> => {
   // Build full URL with query params for GET requests
-  const fullUrl = buildUrl(API_BASE_URL, url, params);
+  const fullUrl = buildUrl(baseUrl, url, params);
   const method = options.method || 'GET';
   const startTime = Date.now();
   
@@ -94,9 +99,9 @@ const makeRequest = async (
   }
 
   // Prepare headers
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
 
   if (authToken) {
@@ -139,7 +144,7 @@ const makeRequest = async (
 
     // Log response headers (useful for debugging)
     const responseHeaders: Record<string, string> = {};
-    response.headers.forEach((value, key) => {
+    response.headers.forEach((value: string, key: string) => {
       responseHeaders[key] = value;
     });
     logger.log(`[API] Response headers:`, responseHeaders);
@@ -330,9 +335,7 @@ export const apiService = {
   checkHealth: async (): Promise<boolean> => {
     logger.log('[API] Calling checkHealth()');
     try {
-      // Extract base domain from API_BASE_URL (remove /api/v1 if present)
-      const baseDomain = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
-      const healthUrl = `${baseDomain}/api/db-test`;
+      const healthUrl = `${API_BASE}/db-test`;
       
       logger.log(`[API] Health check URL: ${healthUrl}`);
       const response = await fetch(healthUrl, {
@@ -368,9 +371,7 @@ export const apiService = {
     tipo: 'client' | 'agent';
   }) => {
     logger.log(`[API] Calling register()`, sanitizeRequestBody(data));
-    // Extract base domain from API_BASE_URL (remove /api/v1 if present)
-    const baseDomain = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
-    const registerUrl = `${baseDomain}/api/auth/register`;
+    const registerUrl = `${API_BASE}/auth/register`;
     
     logger.log(`[API] Register URL: ${registerUrl}`);
     
@@ -389,7 +390,7 @@ export const apiService = {
     }
 
     // Prepare headers
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
@@ -455,36 +456,157 @@ export const apiService = {
     }
   },
 
+  // --- Profiles (GET /api/profiles/{id}) ---
+  getProfile: async <T = any>(id: string): Promise<T> => {
+    logger.log(`[API] Calling getProfile(${id})`);
+    const response = await makeRequest(`/profiles/${id}`, { method: 'GET' }, undefined, API_BASE);
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: response.statusText };
+      }
+      throw new ApiError(errorData.message || 'Request failed', response.status, errorData);
+    }
+    try {
+      return await response.json();
+    } catch {
+      return {} as T;
+    }
+  },
+
+  // --- Tickets ---
+  getTickets: async <T = any>(params?: {
+    category_id?: string;
+    status?: string;
+    urgency?: string;
+    is_remote?: boolean;
+    search?: string;
+    page?: number;
+  }): Promise<T> => {
+    logger.log(`[API] Calling getTickets()`, params);
+    const response = await makeRequest('/tickets/', { method: 'GET' }, params, API_BASE);
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: response.statusText };
+      }
+      throw new ApiError(errorData.message || 'Request failed', response.status, errorData);
+    }
+    try {
+      return await response.json();
+    } catch {
+      return {} as T;
+    }
+  },
+
+  createTicket: async <T = any>(data: {
+    title: string;
+    description: string;
+    category_id: string;
+    location_id?: string;
+    device_brand?: string;
+    device_model?: string;
+    urgency?: string;
+    is_remote?: boolean;
+  }): Promise<T> => {
+    logger.log(`[API] Calling createTicket()`, sanitizeRequestBody(data));
+    const response = await makeRequest('/tickets/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, undefined, API_BASE);
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: response.statusText };
+      }
+      throw new ApiError(errorData.message || 'Request failed', response.status, errorData);
+    }
+    try {
+      return await response.json();
+    } catch {
+      return {} as T;
+    }
+  },
+
+  getTicket: async <T = any>(id: string): Promise<T> => {
+    logger.log(`[API] Calling getTicket(${id})`);
+    const response = await makeRequest(`/tickets/${id}`, { method: 'GET' }, undefined, API_BASE);
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: response.statusText };
+      }
+      throw new ApiError(errorData.message || 'Request failed', response.status, errorData);
+    }
+    try {
+      return await response.json();
+    } catch {
+      return {} as T;
+    }
+  },
+
+  updateTicket: async <T = any>(id: string, data: Record<string, any>): Promise<T> => {
+    logger.log(`[API] Calling updateTicket(${id})`, sanitizeRequestBody(data));
+    const response = await makeRequest(`/tickets/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }, undefined, API_BASE);
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: response.statusText };
+      }
+      throw new ApiError(errorData.message || 'Request failed', response.status, errorData);
+    }
+    try {
+      return await response.json();
+    } catch {
+      return {} as T;
+    }
+  },
+
+  createBid: async <T = any>(ticketId: string, data: { amount: string | number; description: string }): Promise<T> => {
+    logger.log(`[API] Calling createBid(${ticketId})`, sanitizeRequestBody(data));
+    const response = await makeRequest(`/tickets/${ticketId}/bids`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, undefined, API_BASE);
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: response.statusText };
+      }
+      throw new ApiError(errorData.message || 'Request failed', response.status, errorData);
+    }
+    try {
+      return await response.json();
+    } catch {
+      return {} as T;
+    }
+  },
+
   login: async (data: { email: string; password: string }) => {
     logger.log(`[API] Calling login()`, { email: data.email });
-    // Extract base domain from API_BASE_URL (remove /api/v1 if present)
-    const baseDomain = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
-    const loginUrl = `${baseDomain}/api/auth/login`;
+    const loginUrl = `${API_BASE}/auth/login`;
     
     logger.log(`[API] Login URL: ${loginUrl}`);
-    
-    // Get auth token
-    let authToken: string | null = null;
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      authToken = session?.access_token || null;
-      if (authToken) {
-        logger.log(`[API] Auth token: ${authToken.substring(0, 20)}...`);
-      } else {
-        logger.log(`[API] No auth token found`);
-      }
-    } catch (error) {
-      logger.error('[API] Error getting session:', error);
-    }
 
-    // Prepare headers
-    const headers: HeadersInit = {
+    // Login is unauthenticated — do NOT send Authorization header so backend accepts the request
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-
-    if (authToken) {
-      headers['Authorization'] = `Bearer ${authToken}`;
-    }
 
     // Log request body (sanitize sensitive data)
     const sanitizedBody = sanitizeRequestBody(data);
