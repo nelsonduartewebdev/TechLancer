@@ -27,7 +27,14 @@ export default {
       bundler: 'metro',
       output: 'static',
     },
-    plugins: ['expo-router'],
+    plugins: [
+      'expo-router',
+      'expo-secure-store',
+      'expo-camera',
+      'expo-image-picker',
+      'expo-location',
+      'expo-notifications',
+    ],
     scheme: 'techlancer',
     extra: {
       router: {
@@ -36,6 +43,9 @@ export default {
       eas: {
         projectId: '',
       },
+      // Logging: in dev logs always show; set enableLogging: false in prod to reduce noise
+      enableLogging: true,
+      enableApiLogging: true,
       // Environment variables can be accessed here
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,

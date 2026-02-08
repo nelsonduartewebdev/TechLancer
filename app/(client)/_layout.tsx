@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 
-export default function TabsLayout() {
+export default function ClientLayout() {
   return (
     <Tabs
       screenOptions={{
@@ -11,8 +11,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: 'Home',
-          tabBarLabel: 'Home',
+          title: 'My Tickets',
+          tabBarLabel: 'Tickets',
         }}
       />
       <Tabs.Screen

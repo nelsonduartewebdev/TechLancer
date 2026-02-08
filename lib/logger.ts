@@ -2,22 +2,23 @@ import Constants from 'expo-constants';
 
 // Determine if we're in development mode
 // In Expo/React Native, __DEV__ is automatically set to true in development
-// Also check for explicit enableLogging flag
-const isDevelopment = typeof __DEV__ !== 'undefined' ? __DEV__ : true; // Default to true if __DEV__ is undefined
-const enableLogging = Constants.expoConfig?.extra?.enableLogging !== false; // Default to true unless explicitly disabled
-const shouldLog = isDevelopment && enableLogging;
+const isDevelopment = typeof __DEV__ !== 'undefined' ? __DEV__ : true;
+// In production, respect app.config extra.enableLogging
+const enableLogging = Constants.expoConfig?.extra?.enableLogging !== false;
+const shouldLog = isDevelopment ? true : enableLogging;
 
-// Logger utility with environment-based logging
+// Logger utility with environment-based logging.
+// In dev (__DEV__) we always log to console so API calls are visible in Metro/browser console.
 export const logger = {
   log: (...args: any[]) => {
-    if (shouldLog) {
+    if (isDevelopment || shouldLog) {
       console.log(...args);
     }
   },
 
   error: (...args: any[]) => {
     // Always log errors, but sanitize in production
-    if (shouldLog) {
+    if (isDevelopment || shouldLog) {
       console.error(...args);
     } else {
       // In production, log errors but sanitize sensitive data
@@ -35,19 +36,19 @@ export const logger = {
   },
 
   warn: (...args: any[]) => {
-    if (shouldLog) {
+    if (isDevelopment || shouldLog) {
       console.warn(...args);
     }
   },
 
   info: (...args: any[]) => {
-    if (shouldLog) {
+    if (isDevelopment || shouldLog) {
       console.info(...args);
     }
   },
 
   debug: (...args: any[]) => {
-    if (shouldLog) {
+    if (isDevelopment || shouldLog) {
       console.debug(...args);
     }
   },

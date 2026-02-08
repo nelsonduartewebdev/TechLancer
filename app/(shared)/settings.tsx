@@ -1,14 +1,14 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
-export default function ProfileScreen() {
+export default function SettingsScreen() {
   return (
     <ScrollView style={styles.container}>
       <StatusBar style="auto" />
       <View style={styles.content}>
-        <Text style={styles.title}>Profile</Text>
+        <Text style={styles.title}>Settings</Text>
         <Text style={styles.description}>
-          Your profile information will appear here.
+          App settings and preferences.
         </Text>
       </View>
     </ScrollView>
