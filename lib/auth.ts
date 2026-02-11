@@ -63,8 +63,10 @@ export const authService = {
       const data = (await apiService.login({ email, password })) as ApiLoginResponse;
       console.log('[authService] apiService.login response:', data);
 
-      const accessToken = data.access_token ?? data.token;
-      const refreshToken = data.refresh_token;
+      // Use top-level tokens or tokens nested under session (backend may return either)
+      const accessToken =
+        data.access_token ?? data.token ?? data.session?.access_token;
+      const refreshToken = data.refresh_token ?? data.session?.refresh_token;
 
       if (accessToken && refreshToken) {
         console.log('[authService] Got accessToken and refreshToken from API. Setting Supabase session.');
@@ -85,7 +87,7 @@ export const authService = {
       }
 
       if (data.user && data.session) {
-        console.log('[authService] Received user and session directly from API response.');
+        console.log('[authService] Received user and session directly from API response (no tokens to set).');
         return { user: data.user, session: data.session, error: null };
       }
 

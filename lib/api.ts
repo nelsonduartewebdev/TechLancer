@@ -366,12 +366,13 @@ export const apiService = {
   register: async (data: {
     email: string;
     password: string;
-    nome: string;
-    data_nascimento: string;
-    tipo: 'client' | 'agent';
+    full_name: string;
+    date_of_birth: string;
+    role: 'client' | 'agent';
+    city?: string;
   }) => {
     logger.log(`[API] Calling register()`, sanitizeRequestBody(data));
-    const registerUrl = `${API_BASE}/auth/register`;
+    const registerUrl = `${API_BASE}/register`;
     
     logger.log(`[API] Register URL: ${registerUrl}`);
     
@@ -426,7 +427,7 @@ export const apiService = {
         } catch {
           errorData = { message: response.statusText };
         }
-        logger.error(`[API] POST /api/auth/register failed:`, {
+        logger.error(`[API] POST /api/register failed:`, {
           status: response.status,
           error: errorData,
           requestData: sanitizeRequestBody(data),
@@ -437,9 +438,9 @@ export const apiService = {
       let responseData;
       try {
         responseData = await response.json();
-        logger.log(`[API] POST /api/auth/register success:`, JSON.stringify(responseData, null, 2));
+        logger.log(`[API] POST /api/register success:`, JSON.stringify(responseData, null, 2));
       } catch (e) {
-        logger.warn(`[API] POST /api/auth/register - Response is not JSON`);
+        logger.warn(`[API] POST /api/register - Response is not JSON`);
         responseData = {};
       }
       return responseData;
@@ -476,6 +477,49 @@ export const apiService = {
     }
   },
 
+  // --- Categories (optional backend list; mock fallback when endpoint fails) ---
+  getCategories: async (): Promise<{ id: string; name: string; label_pt?: string; label_en?: string; description_pt?: string; description_en?: string }[]> => {
+    const MOCK_CATEGORIES: { id: string; name: string; label_pt: string; label_en: string; description_pt: string; description_en: string }[] = [
+      { id: 'laptop_repair', name: 'laptop_repair', label_pt: 'Reparação de Portáteis', label_en: 'Laptop Repair', description_pt: 'Reparação de ecrãs, teclados e hardware interno de portáteis.', description_en: 'Fixing screens, keyboards, and internal hardware for laptops.' },
+      { id: 'smartphone_screen', name: 'smartphone_screen', label_pt: 'Ecrã de Smartphone', label_en: 'Smartphone Screen Replacement', description_pt: 'Reparação de ecrãs partidos em iPhones e dispositivos Android.', description_en: 'Cracked screen repairs for iPhones and Android devices.' },
+      { id: 'os_installation', name: 'os_installation', label_pt: 'Instalação de Sistema', label_en: 'OS Installation', description_pt: 'Instalação limpa de Windows, macOS ou Linux.', description_en: 'Fresh install of Windows, macOS, or Linux.' },
+      { id: 'virus_removal', name: 'virus_removal', label_pt: 'Remoção de Vírus', label_en: 'Virus & Malware Removal', description_pt: 'Limpeza profunda de sistemas infetados e configuração de segurança.', description_en: 'Deep cleaning of infected systems and security setup.' },
+      { id: 'data_recovery', name: 'data_recovery', label_pt: 'Recuperação de Dados', label_en: 'Data Recovery', description_pt: 'Recuperação de ficheiros perdidos em discos danificados ou partições apagadas.', description_en: 'Retrieving lost files from damaged disks or deleted partitions.' },
+      { id: 'network_setup', name: 'network_setup', label_pt: 'Configuração de Redes/Wi-Fi', label_en: 'Network & Wi-Fi Setup', description_pt: 'Configuração de routers e otimização do sinal.', description_en: 'Router configuration and signal optimization.' },
+      { id: 'cctv_installation', name: 'cctv_installation', label_pt: 'Instalação de CCTV', label_en: 'CCTV & Security Cameras', description_pt: 'Instalação e configuração de sistemas de videovigilância.', description_en: 'Setup and configuration of security camera systems.' },
+      { id: 'pc_build', name: 'pc_build', label_pt: 'Montagem de Computadores', label_en: 'Custom PC Building', description_pt: 'Montagem de PCs de secretária para gaming ou trabalho.', description_en: 'Expert assembly of gaming or workstation desktop PCs.' },
+      { id: 'printer_fix', name: 'printer_fix', label_pt: 'Reparação de Impressoras', label_en: 'Printer Troubleshooting', description_pt: 'Resolução de problemas de ligação, papel encravado e drivers.', description_en: 'Fixing connectivity, paper jams, and driver issues.' },
+      { id: 'smart_home', name: 'smart_home', label_pt: 'Domótica / Smart Home', label_en: 'Smart Home Integration', description_pt: 'Configuração de luzes inteligentes, fechaduras e assistentes de voz.', description_en: 'Setup of smart lights, locks, and voice assistants.' },
+      { id: 'battery_replacement', name: 'battery_replacement', label_pt: 'Substituição de Bateria', label_en: 'Battery Replacement', description_pt: 'Substituição de baterias em portáteis, tablets e smartphones.', description_en: 'New batteries for laptops, tablets, and smartphones.' },
+      { id: 'web_development', name: 'web_development', label_pt: 'Desenvolvimento Web', label_en: 'Web Development', description_pt: 'Correções rápidas ou projetos de desenvolvimento de websites.', description_en: 'Small fixes or custom website development projects.' },
+      { id: 'software_bugs', name: 'software_bugs', label_pt: 'Resolução de Bugs', label_en: 'Software Bug Fixing', description_pt: 'Correção de erros em aplicações ou scripts personalizados.', description_en: 'Debugging custom applications or scripts.' },
+      { id: 'gaming_console', name: 'gaming_console', label_pt: 'Consolas de Jogos', label_en: 'Gaming Console Repair', description_pt: 'Reparação de portas HDMI, sobreaquecimento ou leitores de disco.', description_en: 'Fixing HDMI ports, overheating, or disk drive issues.' },
+      { id: 'pos_systems', name: 'pos_systems', label_pt: 'Sistemas POS', label_en: 'POS System Support', description_pt: 'Suporte técnico a sistemas de ponto de venda.', description_en: 'Technical support for point-of-sale retail systems.' },
+      { id: 'cloud_storage', name: 'cloud_storage', label_pt: 'Configuração de Cloud', label_en: 'Cloud Storage Setup', description_pt: 'Configuração de iCloud, Google Drive ou servidores NAS locais.', description_en: 'Setting up iCloud, Google Drive, or local NAS servers.' },
+      { id: 'hardware_cleaning', name: 'hardware_cleaning', label_pt: 'Limpeza de Hardware', label_en: 'Deep Hardware Cleaning', description_pt: 'Remoção de pó e reaplicação de pasta térmica.', description_en: 'Dust removal and thermal paste re-application.' },
+      { id: 'email_config', name: 'email_config', label_pt: 'Configuração de Email', label_en: 'Email Configuration', description_pt: 'Configuração de contas de email profissionais Outlook/empresarial.', description_en: 'Setting up professional outlook/business email accounts.' },
+      { id: 'tablet_repair', name: 'tablet_repair', label_pt: 'Reparação de Tablets', label_en: 'Tablet Repair', description_pt: 'Suporte de hardware e software para iPads e tablets.', description_en: 'Hardware and software support for iPads and tablets.' },
+      { id: 'remote_support', name: 'remote_support', label_pt: 'Suporte Remoto', label_en: 'General Remote Support', description_pt: 'Correções rápidas via TeamViewer ou AnyDesk.', description_en: 'Quick fixes that can be done via TeamViewer or AnyDesk.' },
+    ];
+    try {
+      const response = await makeRequest('/categories', { method: 'GET' }, undefined, API_BASE);
+      if (!response.ok) return MOCK_CATEGORIES;
+      const raw = await response.json();
+      const list = Array.isArray(raw) ? raw : raw?.data ?? raw?.categories ?? [];
+      if ((list || []).length === 0) return MOCK_CATEGORIES;
+      return (list || []).map((c: any) => ({
+        id: c.id,
+        name: c.name ?? c.id,
+        label_pt: c.label_pt ?? c.name,
+        label_en: c.label_en ?? c.name,
+        description_pt: c.description_pt ?? c.description ?? null,
+        description_en: c.description_en ?? c.description ?? null,
+      }));
+    } catch {
+      return MOCK_CATEGORIES;
+    }
+  },
+
   // --- Tickets ---
   getTickets: async <T = any>(params?: {
     category_id?: string;
@@ -508,6 +552,10 @@ export const apiService = {
     description: string;
     category_id: string;
     location_id?: string;
+    city?: string;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
     device_brand?: string;
     device_model?: string;
     urgency?: string;
@@ -597,9 +645,105 @@ export const apiService = {
     }
   },
 
+  // Locations (saved places: Home, Office, custom)
+  getLocations: async <T = any[]>(): Promise<T> => {
+    logger.log('[API] Calling getLocations()');
+    const response = await makeRequest('/locations/', { method: 'GET' }, undefined, API_BASE);
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: response.statusText };
+      }
+      throw new ApiError(errorData.message || 'Request failed', response.status, errorData);
+    }
+    try {
+      const data = await response.json();
+      const list = Array.isArray(data) ? data : (data?.data ?? data?.locations ?? []);
+      return list as T;
+    } catch {
+      return [] as T;
+    }
+  },
+
+  createLocation: async <T = any>(data: {
+    label: string;
+    address?: string;
+    city: string;
+    country?: string;
+    latitude?: number;
+    longitude?: number;
+    postal_code?: string;
+  }): Promise<T> => {
+    logger.log('[API] Calling createLocation()', sanitizeRequestBody(data));
+    const response = await makeRequest('/locations/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, undefined, API_BASE);
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: response.statusText };
+      }
+      throw new ApiError(errorData.message || 'Request failed', response.status, errorData);
+    }
+    try {
+      return await response.json();
+    } catch {
+      return {} as T;
+    }
+  },
+
+  updateLocation: async <T = any>(id: string, data: Partial<{
+    label: string;
+    address: string;
+    city: string;
+    country: string;
+    latitude: number;
+    longitude: number;
+    postal_code: string;
+  }>): Promise<T> => {
+    logger.log('[API] Calling updateLocation()', id, sanitizeRequestBody(data));
+    const response = await makeRequest(`/locations/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }, undefined, API_BASE);
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: response.statusText };
+      }
+      throw new ApiError(errorData.message || 'Request failed', response.status, errorData);
+    }
+    try {
+      return await response.json();
+    } catch {
+      return {} as T;
+    }
+  },
+
+  deleteLocation: async (id: string): Promise<void> => {
+    logger.log('[API] Calling deleteLocation()', id);
+    const response = await makeRequest(`/locations/${id}`, { method: 'DELETE' }, undefined, API_BASE);
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: response.statusText };
+      }
+      throw new ApiError(errorData.message || 'Request failed', response.status, errorData);
+    }
+  },
+
   login: async (data: { email: string; password: string }) => {
     logger.log(`[API] Calling login()`, { email: data.email });
-    const loginUrl = `${API_BASE}/auth/login`;
+    const loginUrl = `${API_BASE}/login`;
     
     logger.log(`[API] Login URL: ${loginUrl}`);
 
@@ -636,7 +780,7 @@ export const apiService = {
         } catch {
           errorData = { message: response.statusText };
         }
-        logger.error(`[API] POST /api/auth/login failed:`, {
+        logger.error(`[API] POST /api/login failed:`, {
           status: response.status,
           error: errorData,
           requestData: sanitizeRequestBody(data),
@@ -647,9 +791,9 @@ export const apiService = {
       let responseData;
       try {
         responseData = await response.json();
-        logger.log(`[API] POST /api/auth/login success:`, JSON.stringify(responseData, null, 2));
+        logger.log(`[API] POST /api/login success:`, JSON.stringify(responseData, null, 2));
       } catch (e) {
-        logger.warn(`[API] POST /api/auth/login - Response is not JSON`);
+        logger.warn(`[API] POST /api/login - Response is not JSON`);
         responseData = {};
       }
       return responseData;

@@ -17,6 +17,7 @@ When generating code:
 Navigation:
 - Prefer expo-router unless explicitly told otherwise
 - Use file-based routing conventions correctly
+- Redirects in useEffect: use the useRedirectOnce hook (hooks/useRedirectOnce.ts) so the redirect runs at most once. Never redirect based on auth/session in an effect without this guard, or you risk infinite redirect loops between index and layout.
 
 State & data:
 - Prefer React hooks and lightweight state (useState, useEffect)

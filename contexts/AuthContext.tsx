@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { apiService } from '../lib/api';
 
 // Types for profile data
 export interface Profile {
@@ -66,44 +67,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
-  // Fetch profile data from database
+  // Fetch current user profile from backend GET /profiles/:id (Bearer token)
   const fetchProfile = async (userId: string) => {
     try {
-      // Fetch profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('utilizador')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
-        return;
-      }
-
-      if (profileData) {
+      const data = await apiService.getProfile<Record<string, any>>(userId);
+      if (data && typeof data === 'object') {
+        // Support both { profile, agent_profile } or flat profile object
+        const profileData = data.profile ?? data;
+        const agentData = data.agent_profile ?? profileData.agent_profile ?? null;
         setProfile(profileData as Profile);
-
-        // If agent, fetch agent profile
-        if (profileData.role === 'agent') {
-          const { data: agentData, error: agentError } = await supabase
-            .from('utilizador')
-            .select('*')
-            .eq('id', userId)
-            .single();
-
-          if (agentError) {
-            console.error('Error fetching agent profile:', agentError);
-            setAgentProfile(null);
-          } else {
-            setAgentProfile(agentData as AgentProfile);
-          }
-        } else {
-          setAgentProfile(null);
-        }
+        setAgentProfile((agentData ?? null) as AgentProfile | null);
+      } else {
+        setProfile(null);
+        setAgentProfile(null);
       }
     } catch (error) {
-      console.error('Error in fetchProfile:', error);
+      console.error('Error fetching profile:', error);
+      setProfile(null);
+      setAgentProfile(null);
     }
   };
 

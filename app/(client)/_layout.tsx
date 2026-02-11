@@ -4,22 +4,22 @@ export default function ClientLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: true,
-        tabBarActiveTintColor: '#007AFF',
+        headerShown: false,
+        tabBarActiveTintColor: '#111827',
       }}
     >
       <Tabs.Screen
-        name="home"
+        name="tickets"
         options={{
-          title: 'My Tickets',
-          tabBarLabel: 'Tickets',
+          title: 'Os Meus Pedidos',
+          tabBarLabel: 'Início',
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarLabel: 'Profile',
+          title: 'Perfil',
+          tabBarLabel: 'Perfil',
         }}
       />
     </Tabs>

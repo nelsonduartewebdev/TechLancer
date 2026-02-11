@@ -2,32 +2,29 @@ import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useRedirectOnce } from '../hooks/useRedirectOnce';
 
 export default function Index() {
   const { session, role, loading, initialized } = useAuth();
   const router = useRouter();
+  const runRedirectOnce = useRedirectOnce();
 
   useEffect(() => {
-    // Wait for auth to initialize before redirecting
-    if (!initialized || loading) {
-      return;
-    }
-
-    // Determine the target route based on auth state and role
-    if (!session) {
-      // Not authenticated → redirect to welcome screen
-      router.replace('/(auth)/welcome');
-    } else if (role === 'client') {
-      // Client → redirect to client home
-      router.replace('/(client)/home');
-    } else if (role === 'agent') {
-      // Agent → redirect to agent feed
-      router.replace('/(agent)/feed');
-    } else {
-      // Role not set yet or unknown → redirect to welcome
-      router.replace('/(auth)/welcome');
-    }
-  }, [session, role, loading, initialized, router]);
+    // For logged-in users, wait until we have role before redirecting.
+    // Otherwise we may redirect to client when role is still null (e.g. right after agent registration).
+    const ready = initialized && !loading && (!session || role !== null);
+    runRedirectOnce(ready, () => {
+      if (!session) {
+        router.replace('/(auth)/welcome');
+        return;
+      }
+      if (role === 'agent') {
+        router.replace('/(agent)/feed');
+        return;
+      }
+      router.replace('/(client)/tickets');
+    });
+  }, [session, role, loading, initialized, router, runRedirectOnce]);
 
   // Show loading indicator while checking auth state
   return (

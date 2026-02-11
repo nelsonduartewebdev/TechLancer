@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import { apiService } from './api';
 
 export interface ProfileUpdate {
   full_name?: string;
@@ -21,7 +22,9 @@ export interface Category {
   label_pt: string;
   label_en: string;
   icon: string | null;
-  description: string | null;
+  description?: string | null;
+  description_pt?: string | null;
+  description_en?: string | null;
   sort_order: number;
   is_active: boolean;
 }
@@ -152,16 +155,45 @@ const profilesService = {
     }
   },
 
-  // Fetch all categories
+  // Fetch categories: backend API, fallback to Supabase (backend expects UUIDs)
   fetchCategories: async (): Promise<Category[]> => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const fromApi = await apiService.getCategories();
+    // Only use API result if it returns real UUIDs; mocks use slugs which cause "invalid uuid" on ticket create
+    if (fromApi.length > 0 && uuidRegex.test(fromApi[0].id)) {
+      return fromApi.map((c: any, i) => ({
+        id: c.id,
+        name: c.name,
+        label_pt: c.label_pt ?? c.name,
+        label_en: c.label_en ?? c.name,
+        icon: null,
+        description: c.description ?? null,
+        description_pt: c.description_pt ?? c.description ?? null,
+        description_en: c.description_en ?? c.description ?? null,
+        sort_order: i,
+        is_active: true,
+      }));
+    }
+    // Fallback: fetch from Supabase (source of truth for UUID category ids)
     const { data, error } = await supabase
       .from('categories')
-      .select('*')
+      .select('id, name, label_pt, label_en, icon, description, sort_order, is_active')
       .eq('is_active', true)
       .order('sort_order', { ascending: true });
 
-    if (error) throw error;
-    return data || [];
+    if (error) return [];
+    return (data || []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      label_pt: c.label_pt ?? c.name,
+      label_en: c.label_en ?? c.name,
+      icon: c.icon ?? null,
+      description: c.description ?? null,
+      description_pt: c.description ?? null,
+      description_en: c.description ?? null,
+      sort_order: c.sort_order ?? 0,
+      is_active: c.is_active ?? true,
+    }));
   },
 
   // Get agent's selected categories

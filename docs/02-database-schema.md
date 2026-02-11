@@ -147,7 +147,37 @@ CREATE TABLE public.agent_categories (
 
 ---
 
-## 5. tickets
+## 5. locations
+
+User-saved places (Home, Office, or custom). Used when creating tickets.
+
+```sql
+CREATE TABLE public.locations (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  label         TEXT NOT NULL,             -- 'home', 'office', or custom display name
+  address       TEXT,
+  city          TEXT NOT NULL,
+  country       TEXT DEFAULT 'PT',
+  latitude      DOUBLE PRECISION,
+  longitude     DOUBLE PRECISION,
+  postal_code   TEXT,
+  created_at    TIMESTAMPTZ DEFAULT now(),
+  updated_at    TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_locations_user_id ON public.locations(user_id);
+```
+
+**RLS Policies:**
+- `SELECT`: Users can only read their own locations
+- `INSERT`: Users can only insert for themselves (user_id = auth.uid())
+- `UPDATE`: Users can only update their own locations
+- `DELETE`: Users can only delete their own locations
+
+---
+
+## 6. tickets
 
 Service requests created by clients.
 
@@ -166,7 +196,8 @@ CREATE TABLE public.tickets (
   device_model    TEXT,                 -- e.g. 'MacBook Pro 2023'
   urgency         TEXT DEFAULT 'normal' CHECK (urgency IN ('low', 'normal', 'urgent')),
   
-  -- Location
+  -- Location (denormalized from locations or inline)
+  location_id     UUID REFERENCES public.locations(id),  -- Optional audit: which saved location was used
   city            TEXT,
   address         TEXT,
   latitude        DOUBLE PRECISION,
@@ -212,7 +243,7 @@ CREATE INDEX idx_tickets_created_at ON public.tickets(created_at DESC);
 
 ---
 
-## 6. ticket_media
+## 7. ticket_media
 
 Photos and videos attached to tickets.
 
@@ -246,7 +277,7 @@ CREATE INDEX idx_ticket_media_ticket_id ON public.ticket_media(ticket_id);
 
 ---
 
-## 7. bids
+## 8. bids
 
 Agent quotes/proposals on tickets.
 
@@ -300,7 +331,7 @@ CREATE INDEX idx_bids_status ON public.bids(status);
 
 ---
 
-## 8. conversations
+## 9. conversations
 
 Chat channels between client and agent (created when bid is accepted).
 
@@ -336,7 +367,7 @@ CREATE INDEX idx_conversations_agent_id ON public.conversations(agent_id);
 
 ---
 
-## 9. messages
+## 10. messages
 
 Individual chat messages.
 
@@ -367,7 +398,7 @@ CREATE INDEX idx_messages_sender_id ON public.messages(sender_id);
 
 ---
 
-## 10. payments
+## 11. payments
 
 Escrow payment tracking (Stripe integration).
 
@@ -421,7 +452,7 @@ CREATE INDEX idx_payments_stripe_pi ON public.payments(stripe_payment_intent_id)
 
 ---
 
-## 11. reviews
+## 12. reviews
 
 Mutual ratings after service completion.
 
@@ -455,7 +486,7 @@ CREATE INDEX idx_reviews_ticket_id ON public.reviews(ticket_id);
 
 ---
 
-## 12. notifications
+## 13. notifications
 
 In-app notification log.
 
@@ -487,7 +518,7 @@ CREATE INDEX idx_notifications_user_id ON public.notifications(user_id, is_read,
 
 ---
 
-## 13. disputes
+## 14. disputes
 
 For handling service disagreements.
 
@@ -529,6 +560,7 @@ auth.users (Supabase managed)
     │
     └──< profiles (1:1)
            │
+           ├──< locations (user saved places)
            ├──< agent_profiles (1:1, if role='agent')
            │       │
            │       └──< agent_categories >── categories

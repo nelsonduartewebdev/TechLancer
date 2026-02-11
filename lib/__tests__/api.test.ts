@@ -21,7 +21,7 @@ describe('API Service', () => {
   });
 
   describe('register', () => {
-    it('should call POST /auth/register with correct data', async () => {
+    it('should call POST /register with correct data', async () => {
       const mockResponse = { success: true, user: { id: '123' } };
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
@@ -34,16 +34,16 @@ describe('API Service', () => {
       const registerData = {
         email: 'test@example.com',
         password: 'Password123!',
-        nome: 'Test User',
-        data_nascimento: '2000-01-01',
-        tipo: 'client' as const,
+        full_name: 'Test User',
+        date_of_birth: '2000-01-01',
+        role: 'client' as const,
       };
 
       const result = await apiService.register(registerData);
 
       expect(global.fetch).toHaveBeenCalledTimes(1);
       const callArgs = (global.fetch as jest.Mock).mock.calls[0];
-      expect(callArgs[0]).toContain('/auth/register');
+      expect(callArgs[0]).toContain('/register');
       expect(callArgs[1]?.method).toBe('POST');
       expect(JSON.parse(callArgs[1]?.body)).toEqual(registerData);
       expect(result).toEqual(mockResponse);
@@ -62,9 +62,9 @@ describe('API Service', () => {
       const registerData = {
         email: 'existing@example.com',
         password: 'Password123!',
-        nome: 'Test User',
-        data_nascimento: '2000-01-01',
-        tipo: 'client' as const,
+        full_name: 'Test User',
+        date_of_birth: '2000-01-01',
+        role: 'client' as const,
       };
 
       await expect(apiService.register(registerData)).rejects.toThrow();
@@ -72,7 +72,7 @@ describe('API Service', () => {
   });
 
   describe('login', () => {
-    it('should call POST /auth/login with email and password', async () => {
+    it('should call POST /login with email and password', async () => {
       const mockResponse = { success: true, token: 'mock-token' };
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
@@ -91,7 +91,7 @@ describe('API Service', () => {
 
       expect(global.fetch).toHaveBeenCalledTimes(1);
       const callArgs = (global.fetch as jest.Mock).mock.calls[0];
-      expect(callArgs[0]).toContain('/auth/login');
+      expect(callArgs[0]).toContain('/login');
       expect(callArgs[1]?.method).toBe('POST');
       expect(JSON.parse(callArgs[1]?.body)).toEqual(loginData);
       expect(result).toEqual(mockResponse);
